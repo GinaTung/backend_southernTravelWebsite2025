@@ -19,7 +19,7 @@ app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "backend_southernTravelWebsite2025 API V1");
-    c.RoutePrefix = string.Empty; // 直接在根目錄看到 Swagger
+    //c.RoutePrefix = string.Empty; // 直接在根目錄看到 Swagger
 });
 
 // 暫時不要用 HTTPS 轉址，避免本地 HTTP 衝突
