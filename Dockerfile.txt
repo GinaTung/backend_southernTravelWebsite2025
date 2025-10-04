@@ -19,7 +19,7 @@ WORKDIR /app
 COPY --from=build /out .
 
 # 設定容器啟動時運行的指令（修改為正確的 DLL 名稱）
-ENTRYPOINT ["dotnet", "stepTogether.dll"]
+ENTRYPOINT ["dotnet", "backend_southernTravelWebsite2025.dll"]
 
 # 開放容器的 80 端口
 EXPOSE 80
