@@ -1,11 +1,6 @@
 ﻿using backend_southernTravelWebsite2025.DTOs;
 using backend_southernTravelWebsite2025.Models.Entities;
 using backend_southernTravelWebsite2025.Repositories;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace backend_southernTravelWebsite2025.Services
 {
