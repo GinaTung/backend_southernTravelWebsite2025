@@ -5,10 +5,15 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 從 appsettings.json 取得連線字串
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+// 嘗試從環境變數讀取 Supabase 連線字串（Render 用）
+var envConnection = Environment.GetEnvironmentVariable("SUPABASE_DB_CONNECTION");
 
-// 註冊資料庫上下文 (用你已建立的 AppDbContext)
+// 若無環境變數則回到 appsettings.json 的預設連線字串（本地開發用）
+var connectionString = !string.IsNullOrEmpty(envConnection)
+    ? envConnection
+    : builder.Configuration.GetConnectionString("DefaultConnection");
+
+// 註冊資料庫上下文
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
@@ -23,17 +28,19 @@ builder.Services.AddScoped<IMemberService, MemberService>();
 
 var app = builder.Build();
 
-// 啟動 Swagger，不管環境
+// 啟動 Swagger
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "backend_southernTravelWebsite2025 API V1");
-    //c.RoutePrefix = string.Empty; // 直接在根目錄看到 Swagger
 });
 
-// 暫時不要用 HTTPS 轉址，避免本地 HTTP 衝突
-// app.UseHttpsRedirection();
-
+// 暫時不強制 HTTPS（Render 自動處理 HTTPS）
 app.UseAuthorization();
 app.MapControllers();
+
+// Render 會提供 PORT 環境變數，讓應用在正確 port 運作
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
+app.Urls.Add($"http://0.0.0.0:{port}");
+
 app.Run();
