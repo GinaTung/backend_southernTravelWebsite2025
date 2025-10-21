@@ -1,7 +1,16 @@
 ﻿using backend_southernTravelWebsite2025.Repositories;
 using backend_southernTravelWebsite2025.Services;
+using backend_southernTravelWebsite2025.Data;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// 從 appsettings.json 取得連線字串
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+// 註冊資料庫上下文 (用你已建立的 AppDbContext)
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(connectionString));
 
 // 加入 Controller 與 Swagger
 builder.Services.AddControllers();
