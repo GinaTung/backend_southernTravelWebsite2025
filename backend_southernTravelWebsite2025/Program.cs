@@ -14,8 +14,18 @@ var connectionString = !string.IsNullOrEmpty(envConnection)
     : builder.Configuration.GetConnectionString("DefaultConnection");
 
 // 註冊資料庫上下文
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(connectionString));
+//builder.Services.AddDbContext<AppDbContext>(options =>
+//    options.UseNpgsql(connectionString));
+
+// 註冊資料庫上下文（使用 DbContextPool 節省連線）
+builder.Services.AddDbContextPool<AppDbContext>(options =>
+    options.UseNpgsql(connectionString, npgsqlOptions =>
+    {
+        npgsqlOptions.CommandTimeout(120); // 120秒
+        npgsqlOptions.EnableRetryOnFailure(3); // 自動重試3次
+    })
+);
+
 
 // 加入 Controller 與 Swagger
 builder.Services.AddControllers();
