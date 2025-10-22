@@ -27,7 +27,7 @@ namespace backend_southernTravelWebsite2025.Services
                 Email = dto.Email,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password), // 密碼加密
                 PhoneNumber = dto.PhoneNumber,
-                Birthday = dto.Birthday
+                Birthday = DateTime.SpecifyKind(dto.Birthday, DateTimeKind.Utc)
             };
 
             var created = _repo.Add(member);
