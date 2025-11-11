@@ -9,6 +9,9 @@ namespace backend_southernTravelWebsite2025.Data
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
         public DbSet<Member> Members { get; set; }
+        public DbSet<Attractions> Attractions { get; set; }
+        public DbSet<Test> Test { get; set; }
+
         // 其他資料表可以在這裡加上
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -17,6 +20,8 @@ namespace backend_southernTravelWebsite2025.Data
 
             // ✅ 指定資料表名稱為小寫 "members"
             modelBuilder.Entity<Member>().ToTable("members");
+            modelBuilder.Entity<Attractions>().ToTable("attractions");
+            modelBuilder.Entity<Test>().ToTable("tests");
         }
     }
 }

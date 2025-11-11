@@ -1,56 +1,90 @@
-﻿using backend_southernTravelWebsite2025.Repositories;
+﻿using backend_southernTravelWebsite2025.Data;
+using backend_southernTravelWebsite2025.Repositories;
+using backend_southernTravelWebsite2025.Repositories.Interfaces;
 using backend_southernTravelWebsite2025.Services;
-using backend_southernTravelWebsite2025.Data;
+using backend_southernTravelWebsite2025.Services.Interfaces;
+using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 嘗試從環境變數讀取 Supabase 連線字串（Render 用）
-var envConnection = Environment.GetEnvironmentVariable("SUPABASE_DB_CONNECTION");
-
-// 若無環境變數則回到 appsettings.json 的預設連線字串（本地開發用）
-var connectionString = !string.IsNullOrEmpty(envConnection)
-    ? envConnection
+// 1) 連線字串：環境變數優先（Render / 伺服器）
+var envConn = Environment.GetEnvironmentVariable("SUPABASE_DB_CONNECTION");
+var connectionString = !string.IsNullOrWhiteSpace(envConn)
+    ? envConn
     : builder.Configuration.GetConnectionString("DefaultConnection");
 
-// 註冊資料庫上下文
-//builder.Services.AddDbContext<AppDbContext>(options =>
-//    options.UseNpgsql(connectionString));
+// 建議在 Supabase 連線字串含以下參數：
+// SSL Mode=Require; Trust Server Certificate=true; Timeout=5; Command Timeout=15; Pooling=true; Maximum Pool Size=50
 
-// 註冊資料庫上下文（使用 DbContextPool 節省連線）
+// 2) 基本記錄
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Services.AddHttpLogging(o => o.LoggingFields = HttpLoggingFields.All);
+
+// 3) 只保留「一種」DbContext 註冊（建議使用 Pool 版即可）
 builder.Services.AddDbContextPool<AppDbContext>(options =>
-    options.UseNpgsql(connectionString, npgsqlOptions =>
+{
+    options.UseNpgsql(connectionString, npgsql =>
     {
-        npgsqlOptions.CommandTimeout(120); // 120秒
-        npgsqlOptions.EnableRetryOnFailure(3); // 自動重試3次
-    })
-);
+        npgsql.CommandTimeout(10); // 跟連線字串一致
+        npgsql.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(2),
+            errorCodesToAdd: null
+        );
+    });
 
+#if DEBUG
+    options.EnableSensitiveDataLogging();   // 只在開發開
+#endif
+    options.LogTo(Console.WriteLine, LogLevel.Information);
+});
 
-// 加入 Controller 與 Swagger
+// 4) DI
+builder.Services.AddScoped<IAttractionsRepository, AttractionsRepository>();
+builder.Services.AddScoped<IAttractionsService, AttractionsService>();
+builder.Services.AddScoped<IMemberRepository, MemberRepository>();
+builder.Services.AddScoped<IMemberService, MemberService>();
+builder.Services.AddScoped<ITestRepository, TestRepository>();
+builder.Services.AddScoped<ITestService, TestService>();
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// 依賴注入 (DI)
-builder.Services.AddScoped<IMemberRepository, MemberRepository>();
-builder.Services.AddScoped<IMemberService, MemberService>();
-
 var app = builder.Build();
 
-// 啟動 Swagger
-app.UseSwagger();
-app.UseSwaggerUI(c =>
-{
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "backend_southernTravelWebsite2025 API V1");
-});
+// 5) 診斷：印出實際使用的主機與 DB（啟動時）
+var csb = new NpgsqlConnectionStringBuilder(connectionString);
+Console.WriteLine($"[DB-CONFIG] Host={csb.Host}, Port={csb.Port}, Database={csb.Database}, User={csb.Username}, SSL={csb.SslMode}");
 
-// 暫時不強制 HTTPS（Render 自動處理 HTTPS）
+// 6) 中介層順序
+app.UseSwagger();
+app.UseSwaggerUI();
+
+app.UseRouting();
+app.UseHttpLogging();
 app.UseAuthorization();
+
 app.MapControllers();
 
-// Render 會提供 PORT 環境變數，讓應用在正確 port 運作
+// 7) Render（或本機）埠設定
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
 app.Urls.Add($"http://0.0.0.0:{port}");
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    try
+    {
+        await db.Database.ExecuteSqlRawAsync("select 1;");
+        Console.WriteLine("[DB] Warm-up OK");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[DB] Warm-up failed: {ex.Message}");
+    }
+}
 
 app.Run();
