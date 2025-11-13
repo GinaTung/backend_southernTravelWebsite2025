@@ -12,10 +12,26 @@ namespace backend_southernTravelWebsite2025.Services
             _testRepo = testRepo;
         }
 
-        public async Task<TestDtos?> GetTestDtoAsync(int id, CancellationToken ct = default)
+        // 取得全部
+        public async Task<IEnumerable<TestDtos>> GetAllTestsAsync(CancellationToken ct)
         {
-            var test = await _testRepo.GetByIdAsync(id,ct);
-            if (test is null) return null;
+            var tests = await _testRepo.GetAllAsync(); // <-- 使用你 repo 的方法
+
+            // Mapping
+            return tests.Select(x => new TestDtos
+            {
+                Id = x.Id,
+                Name = x.Name,
+                Email = x.Email
+            });
+        }
+
+        // 取得單筆
+        public async Task<TestDtos?> GetTestDtoAsync(long id, CancellationToken ct = default)
+        {
+            var test = await _testRepo.GetByIdAsync(id, ct);
+            if (test is null)
+                return null;
 
             return new TestDtos
             {

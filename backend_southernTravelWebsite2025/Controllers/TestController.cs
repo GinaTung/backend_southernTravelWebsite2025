@@ -14,7 +14,16 @@ namespace backend_southernTravelWebsite2025.Controllers
         {
             _testService = testService;
         }
+        // 取得全部資料
+        // GET api/tests
+        [HttpGet]
+        public async Task<IActionResult> GetAll(CancellationToken ct)
+        {
+            var list = await _testService.GetAllTestsAsync(ct);
+            return Ok(list);
+        }
 
+        // 取得單筆資料
         // GET api/tests/1
         [HttpGet("{id:long}")]
         public async Task<IActionResult> GetById(int id, CancellationToken ct)
